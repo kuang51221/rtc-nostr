@@ -2,7 +2,7 @@
 <html>
 <head>
     <title>Nostr WebRTC 通訊</title>
-    <script src="https://cdn.jsdelivr.net/npm/nostr-tools@1.11.0/lib/nostr.bundle.min.js"></script>
+    
 </head>
 <body>
     <h1>Nostr WebRTC 通訊</h1>
@@ -40,8 +40,9 @@
         <h2>狀態</h2>
         <div id="status">未連接</div>
     </div>
-
-    <script>
+    <script type="module"> 
+        import nostr-tools from https://cdn.jsdelivr.net/npm/nostr-tools@2.15.0/+esm 
+ 
         // 全局變量
         let nostrPrivateKey = '';
         let nostrPublicKey = '';
