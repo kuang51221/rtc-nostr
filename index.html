@@ -172,6 +172,9 @@
                 if (event) {
                       console.log('it exists indeed on this relay:', event)
                 }
+            }catch (e) {
+                    console.warn('中繼連接出錯:', e);
+                }
                
         });
         
