@@ -160,35 +160,28 @@
             relayStatus.className = '';
             
             try {
-                // 初始化中繼連接
-                relay = await nostrTools.relayInit(relayUrl);
-                await relay.connect();
-                
-                relayStatus.textContent = '狀態: 已連接 - ' + relayUrl;
-                relayStatus.className = 'success';
-                
-                // 訂閱一些事件來測試
-                subscription = relay.sub([
-                    {
-                        kinds: [1], // 文字記事
-                        limit: 1
-                    }
-                ]);
-                
-                subscription.on('event', (event) => {
-                    latestEvent.textContent = JSON.stringify(event, null, 2);
-                    console.log('收到事件:', event);
-                });
-                
-                subscription.on('eose', () => {
-                    console.log('訂閱結束 (EOSE)');
-                });
-                
-            } catch (error) {
-                relayStatus.textContent = '狀態: 連接失敗 - ' + error.message;
-                relayStatus.className = 'error';
-                console.error('中繼連接錯誤:', error);
-            }
+                // 中繼連接
+                const pool = new nostrTools.SimplePool()
+                const relays = ['wss://relay.damus.io', 'wss://relay.example2.com']
+                const event = pool.get(
+                  relays,
+                  {
+                    ids: ['d7dd5eb3ab747e16f8d0212d53032ea2a7cadef53837e5a6c66d42849fcb9027'],
+                  },
+                )
+                if (event) {
+                      console.log('it exists indeed on this relay:', event)
+                }
+                // let's query for one event that exists
+                const event = pool.get(
+                  relays,
+                  {
+                    ids: ['d7dd5eb3ab747e16f8d0212d53032ea2a7cadef53837e5a6c66d42849fcb9027'],
+                  },
+                )
+                if (event) {
+                  console.log('it exists indeed on this relay:', event)
+                }
         });
         
         // 3. 事件簽名測試
