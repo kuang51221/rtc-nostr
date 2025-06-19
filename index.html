@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nostr WebRTC Signaling</title>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; margin-top: 20px; }
+        #localVideo, #remoteVideo { width: 320px; height: 240px; border: 1px solid black; margin: 10px; }
+        #log { margin-top: 20px; width: 80%; height: 150px; border: 1px solid lightgray; overflow-y: scroll; padding: 10px; background-color: #f9f9f9; }
+        button { margin: 5px; padding: 10px 20px; }
+        input { padding: 8px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Nostr WebRTC Signaling</h1>
+
+    <div>
+        <label for="relayInput">Nostr Relay (e.g., wss://relay.damus.io):</label>
+        <input type="text" id="relayInput" value="wss://relay.damus.io">
+        <button id="connectRelayButton">連接 Relay</button>
+    </div>
+    <div>
+        <label for="privateKeyInput">您的私鑰 (hex):</label>
+        <input type="text" id="privateKeyInput" placeholder="Enter your private key or leave blank for new">
+        <button id="generateKeyButton">產生新金鑰</button>
+        <p>您的公開金鑰: <span id="publicKeyDisplay"></span></p>
+    </div>
+
+    <hr>
+
+    <h2>視訊通話</h2>
+    <div>
+        <video id="localVideo" autoplay muted></video>
+        <video id="remoteVideo" autoplay></video>
+    </div>
+
+    <div>
+        <label for="remotePublicKeyInput">欲連線的公開金鑰:npub17z8h2jchsxucnyahmqq9hj5xz9a89h9vq8al63q4yv7rzv7yp79shnq7pl</label>
+        <input type="text" id="remotePublicKeyInput" placeholder="Enter remote public key">
+        <button id="startCallButton">發起通話</button>
+        <button id="answerCallButton">接聽通話</button>
+        <button id="hangupCallButton">掛斷</button>
+    </div>
+
+    <hr>
+
+    <h2>日誌</h2>
+    <pre id="log"></pre>
+
+    <script src="https://unpkg.com/nostr-tools/lib/nostr.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
