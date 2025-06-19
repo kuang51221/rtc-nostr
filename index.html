@@ -107,7 +107,8 @@
         let publicKey = '';
         let relay = null;
         let subscription = null;
-        
+        const pool = new nostrTools.SimplePool()
+        const relays = ['wss://relay.damus.io', 'wss://nostr.wine','wss://relay.nostr.band']
         // 1. 生成密鑰對
         generateKeysBtn.addEventListener('click', () => {
             try {
@@ -160,8 +161,7 @@
             
             try {
                 // 中繼連接
-                const pool = new nostrTools.SimplePool()
-                const relays = ['wss://relay.damus.io', 'wss://nostr.wine','wss://relay.nostr.band']
+                
                 const event = pool.get(
                   relays,
                   {
