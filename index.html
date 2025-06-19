@@ -216,7 +216,7 @@
 
                 // this assigns the pubkey, calculates the event id and signs the event in a single step
                 const signedEvent = nostrTools.finalizeEvent(eventTemplate, sk)
-                nostrTools.Promise.any(pool.publish(['wss://relay.damus.io', 'wss://nostr.wine','wss://relay.nostr.band'], signedEvent))
+                await nostrTools.Promise.any(pool.publish(['wss://relay.damus.io', 'wss://nostr.wine','wss://relay.nostr.band'], signedEvent))
 
                 relay.close()
                 
