@@ -41,7 +41,7 @@ function log(message) {
  * 產生 Nostr 金鑰對
  */
 function generateNostrKeys() {
-    const keys = window.NostrTools.generatePrivateKey();
+    const keys = window.NostrTools.generateSecretKey();
     privateKey = keys;
     hexPublicKey = window.NostrTools.getPublicKey(privateKey);
     publicKey = window.NostrTools.nip19.npubEncode(hexPublicKey); // 轉換為 npub 格式
