@@ -1,83 +1,241 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Nostr WebRTC Signaling (v2.15.0)</title>
-    
+    <title>Nostr-Tools 2.15.0 測試</title>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-        .section { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
-        input[type="text"] { width: 100%; padding: 8px; margin: 5px 0; box-sizing: border-box; }
-        button { padding: 8px 15px; margin: 5px 0; cursor: pointer; }
-        #messages { width: 100%; height: 200px; }
-        #status { padding: 10px; margin: 10px 0; background: #f0f0f0; border-radius: 4px; }
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        button {
+            padding: 8px 15px;
+            margin: 5px 0;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        pre {
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
     </style>
 </head>
 <body>
-    <h1>Nostr WebRTC 通訊 (v2.15.0)</h1>
+    <h1>Nostr-Tools 2.15.0 測試</h1>
     
     <div class="section">
-        <h2>Nostr 設定</h2>
-        <button id="generateKeys">生成新密鑰</button>
+        <h2>1. 生成密鑰</h2>
+        <button id="generateKeys">生成新密鑰對</button>
         <div>
-            <label for="privateKey">私鑰 (nsec):</label>
-            <input type="text" id="privateKey" placeholder="nsec1...">
+            <label>私鑰 (nsec):</label>
+            <pre id="privateKeyOutput">尚未生成</pre>
         </div>
         <div>
-            <label for="publicKey">公鑰 (npub1...):</label>
-            <input type="text" id="publicKey" readonly>
+            <label>公鑰 (npub):</label>
+            <pre id="publicKeyOutput">尚未生成</pre>
         </div>
         <div>
-            <label for="relayUrl">Relay URL:</label>
-            <input type="text" id="relayUrl" value="wss://relay.damus.io">
+            <label>原始私鑰 (hex):</label>
+            <pre id="rawPrivateKeyOutput">尚未生成</pre>
         </div>
-        <div>
-            <label for="targetPubkey">目標公鑰 (npub1...):</label>
-            <input type="text" id="targetPubkey" placeholder="npub1...">
-        </div>
-        <button id="connect">連接</button>
-        <button id="disconnect" disabled>斷開連接</button>
     </div>
     
     <div class="section">
-        <h2>通訊</h2>
-        <textarea id="messages" rows="10" readonly></textarea><br>
-        <input type="text" id="messageInput" placeholder="輸入訊息...">
-        <button id="sendMessage" disabled>發送</button>
+        <h2>2. 中繼測試</h2>
+        <div>
+            <label for="relayUrl">中繼URL:</label>
+            <input type="text" id="relayUrl" value="wss://relay.damus.io" style="width: 300px;">
+            <button id="testRelay">測試中繼連接</button>
+        </div>
+        <div id="relayStatus">狀態: 未連接</div>
+        <div id="relayEvents" style="margin-top: 10px;">
+            <label>最近事件:</label>
+            <pre id="latestEvent">無</pre>
+        </div>
     </div>
     
     <div class="section">
-        <h2>狀態</h2>
-        <div id="status">未連接</div>
+        <h2>3. 事件簽名測試</h2>
+        <button id="signEvent">簽名測試事件</button>
+        <div id="signatureResult">
+            <label>簽名結果:</label>
+            <pre id="signedEventOutput">無</pre>
+        </div>
     </div>
 
-    <script>
-        import * as nostr from 'https://esm.run/nostr-tools';
-        console.log(nostr)
+    <script type="module">
+        import * as nostrTools from 'https://cdn.jsdelivr.net/npm/nostr-tools@2.15.0/+esm';
+        
+        // DOM元素
+        const generateKeysBtn = document.getElementById('generateKeys');
+        const privateKeyOutput = document.getElementById('privateKeyOutput');
+        const publicKeyOutput = document.getElementById('publicKeyOutput');
+        const rawPrivateKeyOutput = document.getElementById('rawPrivateKeyOutput');
+        
+        const testRelayBtn = document.getElementById('testRelay');
+        const relayUrlInput = document.getElementById('relayUrl');
+        const relayStatus = document.getElementById('relayStatus');
+        const latestEvent = document.getElementById('latestEvent');
+        
+        const signEventBtn = document.getElementById('signEvent');
+        const signedEventOutput = document.getElementById('signedEventOutput');
+        
         // 全局變量
-        let nostrPrivateKey = '';
-        let nostrPublicKey = '';
+        let privateKey = '';
+        let publicKey = '';
         let relay = null;
         let subscription = null;
-        let targetPubkey = '';
         
-        // WebRTC 變量
-        let peerConnection = null;
-        let dataChannel = null;
+        // 1. 生成密鑰對
+        generateKeysBtn.addEventListener('click', () => {
+            try {
+                // 生成隨機私鑰 (hex格式)
+                privateKey = nostrTools.generatePrivateKey();
+                
+                // 從私鑰獲取公鑰 (hex格式)
+                publicKey = nostrTools.getPublicKey(privateKey);
+                
+                // 轉換為nsec/npub格式
+                const nsec = nostrTools.nip19.nsecEncode(privateKey);
+                const npub = nostrTools.nip19.npubEncode(publicKey);
+                
+                // 顯示結果
+                privateKeyOutput.textContent = nsec;
+                publicKeyOutput.textContent = npub;
+                rawPrivateKeyOutput.textContent = privateKey;
+                
+                privateKeyOutput.className = 'success';
+                publicKeyOutput.className = 'success';
+                rawPrivateKeyOutput.className = 'success';
+                
+                console.log('生成的密鑰對:', { privateKey, publicKey, nsec, npub });
+            } catch (error) {
+                privateKeyOutput.textContent = '錯誤: ' + error.message;
+                privateKeyOutput.className = 'error';
+                console.error('生成密鑰錯誤:', error);
+            }
+        });
         
-        // DOM 元素
-        const messagesTextarea = document.getElementById('messages');
-        const messageInput = document.getElementById('messageInput');
-        const sendMessageButton = document.getElementById('sendMessage');
-        const statusDiv = document.getElementById('status');
-        const generateKeysButton = document.getElementById('generateKeys');
-        const connectButton = document.getElementById('connect');
-        const disconnectButton = document.getElementById('disconnect');
-        const privateKeyInput = document.getElementById('privateKey');
-        const publicKeyInput = document.getElementById('publicKey');
-        const relayUrlInput = document.getElementById('relayUrl');
-        const targetPubkeyInput = document.getElementById('targetPubkey');
+        // 2. 測試中繼連接
+        testRelayBtn.addEventListener('click', async () => {
+            if (relay) {
+                try {
+                    await relay.close();
+                } catch (e) {
+                    console.warn('關閉舊連接時出錯:', e);
+                }
+            }
+            
+            const relayUrl = relayUrlInput.value;
+            if (!relayUrl) {
+                relayStatus.textContent = '狀態: 請輸入中繼URL';
+                relayStatus.className = 'error';
+                return;
+            }
+            
+            relayStatus.textContent = '狀態: 連接中...';
+            relayStatus.className = '';
+            
+            try {
+                // 初始化中繼連接
+                relay = await nostrTools.relayInit(relayUrl);
+                await relay.connect();
+                
+                relayStatus.textContent = '狀態: 已連接 - ' + relayUrl;
+                relayStatus.className = 'success';
+                
+                // 訂閱一些事件來測試
+                subscription = relay.sub([
+                    {
+                        kinds: [1], // 文字記事
+                        limit: 1
+                    }
+                ]);
+                
+                subscription.on('event', (event) => {
+                    latestEvent.textContent = JSON.stringify(event, null, 2);
+                    console.log('收到事件:', event);
+                });
+                
+                subscription.on('eose', () => {
+                    console.log('訂閱結束 (EOSE)');
+                });
+                
+            } catch (error) {
+                relayStatus.textContent = '狀態: 連接失敗 - ' + error.message;
+                relayStatus.className = 'error';
+                console.error('中繼連接錯誤:', error);
+            }
+        });
         
-       
+        // 3. 事件簽名測試
+        signEventBtn.addEventListener('click', () => {
+            if (!privateKey) {
+                signedEventOutput.textContent = '請先生成密鑰對';
+                signedEventOutput.className = 'error';
+                return;
+            }
+            
+            try {
+                // 創建一個測試事件
+                const event = {
+                    kind: 1,
+                    created_at: Math.floor(Date.now() / 1000),
+                    tags: [],
+                    content: '這是來自Nostr-Tools測試的訊息',
+                    pubkey: publicKey
+                };
+                
+                // 計算事件ID並簽名
+                event.id = nostrTools.getEventHash(event);
+                event.sig = nostrTools.signEvent(event, privateKey);
+                
+                // 顯示結果
+                signedEventOutput.textContent = JSON.stringify(event, null, 2);
+                signedEventOutput.className = 'success';
+                
+                console.log('簽名的事件:', event);
+                
+                // 驗證簽名
+                const isValid = nostrTools.verifySignature(event);
+                console.log('簽名驗證結果:', isValid);
+                
+            } catch (error) {
+                signedEventOutput.textContent = '錯誤: ' + error.message;
+                signedEventOutput.className = 'error';
+                console.error('簽名事件錯誤:', error);
+            }
+        });
+        
+        // 頁面卸載時清理
+        window.addEventListener('beforeunload', () => {
+            if (relay) {
+                relay.close().catch(console.error);
+            }
+        });
     </script>
 </body>
 </html>
