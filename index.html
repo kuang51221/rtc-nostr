@@ -1,48 +1,56 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Nostr WebRTC 通訊</title>
-    
+    <title>Nostr WebRTC Signaling (v2.15.0)</title>
+    <script src="https://cdn.jsdelivr.net/npm/nostr-tools@2.15.0/nostr.bundle.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .section { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        input[type="text"] { width: 100%; padding: 8px; margin: 5px 0; box-sizing: border-box; }
+        button { padding: 8px 15px; margin: 5px 0; cursor: pointer; }
+        #messages { width: 100%; height: 200px; }
+        #status { padding: 10px; margin: 10px 0; background: #f0f0f0; border-radius: 4px; }
+    </style>
 </head>
 <body>
-    <h1>Nostr WebRTC 通訊</h1>
+    <h1>Nostr WebRTC 通訊 (v2.15.0)</h1>
     
-    <div>
+    <div class="section">
         <h2>Nostr 設定</h2>
         <button id="generateKeys">生成新密鑰</button>
         <div>
-            <label for="privateKey">私鑰:</label>
-            <input type="text" id="privateKey" size="64">
+            <label for="privateKey">私鑰 (nsec):</label>
+            <input type="text" id="privateKey" placeholder="nsec1...">
         </div>
         <div>
-            <label for="publicKey">公鑰:</label>
-            <input type="text" id="publicKey" size="64" readonly>
+            <label for="publicKey">公鑰 (npub1...):</label>
+            <input type="text" id="publicKey" readonly>
         </div>
         <div>
             <label for="relayUrl">Relay URL:</label>
             <input type="text" id="relayUrl" value="wss://relay.damus.io">
         </div>
         <div>
-            <label for="targetPubkey">目標公鑰:</label>
-            <input type="text" id="targetPubkey" size="64">
+            <label for="targetPubkey">目標公鑰 (npub1...):</label>
+            <input type="text" id="targetPubkey" placeholder="npub1...">
         </div>
         <button id="connect">連接</button>
+        <button id="disconnect" disabled>斷開連接</button>
     </div>
     
-    <div>
+    <div class="section">
         <h2>通訊</h2>
-        <textarea id="messages" rows="10" cols="50" readonly></textarea><br>
-        <input type="text" id="messageInput" size="50">
-        <button id="sendMessage">發送</button>
+        <textarea id="messages" rows="10" readonly></textarea><br>
+        <input type="text" id="messageInput" placeholder="輸入訊息...">
+        <button id="sendMessage" disabled>發送</button>
     </div>
     
-    <div>
+    <div class="section">
         <h2>狀態</h2>
         <div id="status">未連接</div>
     </div>
-    <script type="module"> 
-        import nostr-tools from https://cdn.jsdelivr.net/npm/nostr-tools@2.15.0/+esm 
- 
+
+    <script>
         // 全局變量
         let nostrPrivateKey = '';
         let nostrPublicKey = '';
@@ -61,6 +69,7 @@
         const statusDiv = document.getElementById('status');
         const generateKeysButton = document.getElementById('generateKeys');
         const connectButton = document.getElementById('connect');
+        const disconnectButton = document.getElementById('disconnect');
         const privateKeyInput = document.getElementById('privateKey');
         const publicKeyInput = document.getElementById('publicKey');
         const relayUrlInput = document.getElementById('relayUrl');
@@ -70,6 +79,7 @@
         function init() {
             generateKeysButton.addEventListener('click', generateKeys);
             connectButton.addEventListener('click', startConnection);
+            disconnectButton.addEventListener('click', disconnect);
             sendMessageButton.addEventListener('click', sendMessage);
             
             // 檢查localStorage是否有保存的密鑰
@@ -81,45 +91,78 @@
         
         // 生成新的Nostr密鑰對
         function generateKeys() {
-            const privateKey = nostr.generateSecretKey();
-            privateKeyInput.value = privateKey;
-            localStorage.setItem('nostrPrivateKey', privateKey);
+            const privateKey = window.nostr.generatePrivateKey(); // 生成隨機私鑰
+            const nsec = window.nostr.nip19.nsecEncode(privateKey); // 轉換為nsec格式
+            privateKeyInput.value = nsec;
+            localStorage.setItem('nostrPrivateKey', nsec);
             updatePublicKey();
         }
         
         // 更新公鑰顯示
         function updatePublicKey() {
-            nostrPrivateKey = privateKeyInput.value;
-            if (nostrPrivateKey.length === 64) {
-                nostrPublicKey = nostr.getPublicKey(nostrPrivateKey);
-                publicKeyInput.value = nostrPublicKey;
+            const nsec = privateKeyInput.value;
+            try {
+                if (nsec.startsWith('nsec1')) {
+                    nostrPrivateKey = window.nostr.nip19.decode(nsec).data;
+                    nostrPublicKey = window.nostr.getPublicKey(nostrPrivateKey);
+                    const npub = window.nostr.nip19.npubEncode(nostrPublicKey);
+                    publicKeyInput.value = npub;
+                } else if (nsec.length === 64) {
+                    // 兼容舊格式的hex私鑰
+                    nostrPrivateKey = nsec;
+                    nostrPublicKey = window.nostr.getPublicKey(nostrPrivateKey);
+                    const npub = window.nostr.nip19.npubEncode(nostrPublicKey);
+                    publicKeyInput.value = npub;
+                }
+            } catch (error) {
+                console.error('密鑰解析錯誤:', error);
             }
         }
         
         // 開始連接
         async function startConnection() {
-            nostrPrivateKey = privateKeyInput.value;
-            nostrPublicKey = nostr.getPublicKey(nostrPrivateKey);
-            publicKeyInput.value = nostrPublicKey;
-            targetPubkey = targetPubkeyInput.value;
-            
-            if (!nostrPrivateKey || !nostrPublicKey || !targetPubkey) {
-                alert('請填寫所有密鑰字段');
+            // 解析私鑰
+            const nsec = privateKeyInput.value;
+            if (nsec.startsWith('nsec1')) {
+                nostrPrivateKey = window.nostr.nip19.decode(nsec).data;
+            } else if (nsec.length === 64) {
+                nostrPrivateKey = nsec;
+            } else {
+                alert('無效的私鑰格式');
                 return;
             }
             
-            statusDiv.textContent = '正在連接...';
+            nostrPublicKey = window.nostr.getPublicKey(nostrPrivateKey);
+            const npub = window.nostr.nip19.npubEncode(nostrPublicKey);
+            publicKeyInput.value = npub;
+            
+            // 解析目標公鑰
+            const targetNpub = targetPubkeyInput.value;
+            if (!targetNpub.startsWith('npub1')) {
+                alert('請輸入有效的npub1格式目標公鑰');
+                return;
+            }
+            
+            try {
+                targetPubkey = window.nostr.nip19.decode(targetNpub).data;
+            } catch (error) {
+                alert('目標公鑰解析失敗: ' + error.message);
+                return;
+            }
+            
+            statusDiv.textContent = '正在連接Nostr relay...';
+            connectButton.disabled = true;
             
             try {
                 // 初始化Nostr relay連接
                 const relayUrl = relayUrlInput.value;
-                relay = await nostr.relayInit(relayUrl);
+                relay = await window.nostr.relayInit(relayUrl);
                 await relay.connect();
                 
-                // 訂閱目標公鑰的消息
+                // 訂閱目標公鑰的消息 (使用kind 20000作為信號交換)
                 subscription = relay.sub([
                     {
-                        kinds: [20000], // 使用自定義kind
+                        kinds: [20000],
                         authors: [targetPubkey],
                         '#p': [nostrPublicKey]
                     }
@@ -130,6 +173,7 @@
                         await handleNostrEvent(event);
                     } catch (error) {
                         console.error('處理Nostr事件錯誤:', error);
+                        appendMessage('處理消息錯誤: ' + error.message);
                     }
                 });
                 
@@ -137,9 +181,11 @@
                 await initWebRTC();
                 
                 statusDiv.textContent = '已連接Nostr relay，等待WebRTC連接...';
+                disconnectButton.disabled = false;
             } catch (error) {
                 console.error('連接錯誤:', error);
                 statusDiv.textContent = '連接失敗: ' + error.message;
+                connectButton.disabled = false;
             }
         }
         
@@ -148,7 +194,7 @@
             const configuration = {
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
-                    // 可以添加更多的STUN/TURN服務器
+                    { urls: 'stun:global.stun.twilio.com:3478?transport=udp' }
                 ]
             };
             
@@ -164,6 +210,17 @@
                 }
             };
             
+            // 處理連接狀態變化
+            peerConnection.onconnectionstatechange = () => {
+                statusDiv.textContent = `WebRTC狀態: ${peerConnection.connectionState}`;
+                
+                if (peerConnection.connectionState === 'connected') {
+                    sendMessageButton.disabled = false;
+                } else {
+                    sendMessageButton.disabled = true;
+                }
+            };
+            
             // 處理數據通道
             peerConnection.ondatachannel = (event) => {
                 dataChannel = event.channel;
@@ -176,7 +233,10 @@
                 setupDataChannel();
                 
                 // 創建offer
-                const offer = await peerConnection.createOffer();
+                const offer = await peerConnection.createOffer({
+                    offerToReceiveAudio: false,
+                    offerToReceiveVideo: false
+                });
                 await peerConnection.setLocalDescription(offer);
                 
                 sendSignal({
@@ -189,11 +249,13 @@
         // 設置數據通道
         function setupDataChannel() {
             dataChannel.onopen = () => {
-                statusDiv.textContent = 'WebRTC連接已建立!';
+                appendMessage('數據通道已開啟');
+                sendMessageButton.disabled = false;
             };
             
             dataChannel.onclose = () => {
-                statusDiv.textContent = 'WebRTC連接已關閉';
+                appendMessage('數據通道已關閉');
+                sendMessageButton.disabled = true;
             };
             
             dataChannel.onmessage = (event) => {
@@ -202,6 +264,7 @@
             
             dataChannel.onerror = (error) => {
                 console.error('數據通道錯誤:', error);
+                appendMessage(`錯誤: ${error.message}`);
             };
         }
         
@@ -212,6 +275,7 @@
                 
                 switch (content.type) {
                     case 'offer':
+                        appendMessage('收到WebRTC offer');
                         if (!peerConnection) {
                             await initWebRTC();
                         }
@@ -231,6 +295,7 @@
                         break;
                         
                     case 'answer':
+                        appendMessage('收到WebRTC answer');
                         await peerConnection.setRemoteDescription(new RTCSessionDescription({
                             type: 'answer',
                             sdp: content.sdp
@@ -243,6 +308,7 @@
                 }
             } catch (error) {
                 console.error('處理信號錯誤:', error);
+                appendMessage(`信號處理錯誤: ${error.message}`);
             }
         }
         
@@ -251,24 +317,25 @@
             if (!relay) return;
             
             const event = {
-                kind: 20000, // 自定義kind
+                kind: 20000, // 自定義kind用於信號交換
                 created_at: Math.floor(Date.now() / 1000),
                 tags: [['p', targetPubkey]],
                 content: JSON.stringify(signal),
                 pubkey: nostrPublicKey
             };
             
-            event.id = nostr.getEventHash(event);
-            event.sig = nostr.signEvent(event, nostrPrivateKey);
+            event.id = window.nostr.getEventHash(event);
+            event.sig = window.nostr.signEvent(event, nostrPrivateKey);
             
             relay.publish(event).catch(error => {
                 console.error('發送信號失敗:', error);
+                appendMessage(`發送信號失敗: ${error.message}`);
             });
         }
         
         // 發送消息
         function sendMessage() {
-            const message = messageInput.value;
+            const message = messageInput.value.trim();
             if (message && dataChannel && dataChannel.readyState === 'open') {
                 dataChannel.send(message);
                 appendMessage(`我: ${message}`);
@@ -276,14 +343,42 @@
             }
         }
         
+        // 斷開連接
+        function disconnect() {
+            if (dataChannel) {
+                dataChannel.close();
+                dataChannel = null;
+            }
+            
+            if (peerConnection) {
+                peerConnection.close();
+                peerConnection = null;
+            }
+            
+            if (subscription) {
+                subscription.unsub();
+                subscription = null;
+            }
+            
+            if (relay) {
+                relay.close();
+                relay = null;
+            }
+            
+            statusDiv.textContent = '已斷開連接';
+            sendMessageButton.disabled = true;
+            connectButton.disabled = false;
+            disconnectButton.disabled = true;
+        }
+        
         // 添加消息到顯示區域
         function appendMessage(message) {
-            messagesTextarea.value += message + '\n';
+            messagesTextarea.value += `${new Date().toLocaleTimeString()}: ${message}\n`;
             messagesTextarea.scrollTop = messagesTextarea.scrollHeight;
         }
         
         // 啟動應用
-        init();
+        document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>
