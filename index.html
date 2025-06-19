@@ -112,10 +112,10 @@
         generateKeysBtn.addEventListener('click', () => {
             try {
                 // 生成隨機私鑰 (hex格式)
-                privateKey = generateSecretKey();
+                privateKey = nostrTools.generateSecretKey();
                 
                 // 從私鑰獲取公鑰 (hex格式)
-                publicKey = getPublicKey(privateKey);
+                publicKey = nostrTools.getPublicKey(privateKey);
                 
                 // 轉換為nsec/npub格式
                 const nsec = nostrTools.nip19.nsecEncode(privateKey);
