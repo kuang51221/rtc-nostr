@@ -88,7 +88,7 @@
 
     <script type="module">
         import * as nostrTools from 'https://cdn.jsdelivr.net/npm/nostr-tools@2.15.0/+esm';
-        
+        import { generateSecretKey, getPublicKey } from nostrTools;
         // DOM元素
         const generateKeysBtn = document.getElementById('generateKeys');
         const privateKeyOutput = document.getElementById('privateKeyOutput');
@@ -113,10 +113,10 @@
         generateKeysBtn.addEventListener('click', () => {
             try {
                 // 生成隨機私鑰 (hex格式)
-                privateKey = nostrTools.generateSecretKey();
+                privateKey = generateSecretKey();
                 
                 // 從私鑰獲取公鑰 (hex格式)
-                publicKey = nostrTools.getPublicKey(privateKey);
+                publicKey = getPublicKey(privateKey);
                 
                 // 轉換為nsec/npub格式
                 const nsec = nostrTools.nip19.nsecEncode(privateKey);
