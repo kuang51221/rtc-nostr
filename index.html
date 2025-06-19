@@ -170,7 +170,7 @@
                 )
                 if (event) {
                     relayStatus.textContent = '狀態: 已連接 - ' + relayUrl;
-                    relayStatus.className = 'success: ${event}';
+                    relayStatus.className = 'success';
                     console.log('it exists indeed on this relay:', event)
                 }
             }catch (e) {
@@ -189,17 +189,37 @@
             
             try {
                 // 創建一個測試事件
-                const event = {
-                    kind: 1,
-                    created_at: Math.floor(Date.now() / 1000),
-                    tags: [],
-                    content: '這是來自Nostr-Tools測試的訊息',
-                    pubkey: publicKey
-                };
+                //privateKey = nostrTools.generateSecretKey();
+                // 從私鑰獲取公鑰 (hex格式)
+                //publicKey = nostrTools.getPublicKey(privateKey);
+                let sk = privateKey
+                let pk = publicKey
                 
-                // 計算事件ID並簽名
-                event.id = nostrTools.getEventHash(event);
-                event.sig = nostrTools.signEvent(event, privateKey);
+                pool.subscribe(
+                  ['wss://relay.damus.io', 'wss://nostr.wine','wss://relay.nostr.band'],
+                  {
+                    kinds: [1],
+                    authors: [pk],
+                  },
+                  {
+                    onevent(event) {
+                      console.log('got event:', event)
+                    }
+                  }
+                )
+                let eventTemplate = {
+                  kind: 1,
+                  created_at: Math.floor(Date.now() / 1000),
+                  tags: [],
+                  content: 'hello world',
+                }
+
+                // this assigns the pubkey, calculates the event id and signs the event in a single step
+                const signedEvent = finalizeEvent(eventTemplate, sk)
+                await Promise.any(pool.publish(['wss://a.com', 'wss://b.com'], signedEvent))
+
+                relay.close()
+                
                 
                 // 顯示結果
                 signedEventOutput.textContent = JSON.stringify(event, null, 2);
