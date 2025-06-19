@@ -215,8 +215,8 @@
                 }
 
                 // 計算事件ID並簽名
-                event.id = nostrTools.getEventHash(event);
-                event.sig = nostrTools.signEvent(event, privateKey);
+                event.id = nostrTools.getEventHash(eventTemplate);
+                event.sig = nostrTools.signEvent(eventTemplate, privateKey);
               // 顯示結果
                 signedEventOutput.textContent = JSON.stringify(event, null, 2);
                 signedEventOutput.className = 'success';
