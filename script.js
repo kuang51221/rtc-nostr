@@ -97,7 +97,7 @@ function subscribeToSignals() {
     }
 
     // 訂閱所有發送給自己的 Nostr 事件，特別是 KIND_WEBRTC_SIGNAL
-    sub = pool.sub([relayInput.value], [
+    sub = pool.subscribe([relayInput.value], [
         {
             kinds: [KIND_WEBRTC_SIGNAL],
             '#p': [hexPublicKey], // 篩選目標是自己的公開金鑰的事件
