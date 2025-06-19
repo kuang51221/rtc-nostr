@@ -51,6 +51,7 @@
     </div>
 
     <script>
+        import { generateSecretKey, getPublicKey } from 'nostr-tools/pure'
         // 全局變量
         let nostrPrivateKey = '';
         let nostrPublicKey = '';
@@ -91,7 +92,7 @@
         
         // 生成新的Nostr密鑰對
         function generateKeys() {
-            const privateKey = window.nostr.generateSecretKey(); // 生成隨機私鑰
+            const privateKey = generateSecretKey(); // 生成隨機私鑰
             const nsec = window.nostr.nip19.nsecEncode(privateKey); // 轉換為nsec格式
             privateKeyInput.value = nsec;
             localStorage.setItem('nostrPrivateKey', nsec);
