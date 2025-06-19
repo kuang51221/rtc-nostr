@@ -91,7 +91,7 @@
         
         // 生成新的Nostr密鑰對
         function generateKeys() {
-            const privateKey = window.nostr.generatePrivateKey(); // 生成隨機私鑰
+            const privateKey = window.nostr.generateSecretKey(); // 生成隨機私鑰
             const nsec = window.nostr.nip19.nsecEncode(privateKey); // 轉換為nsec格式
             privateKeyInput.value = nsec;
             localStorage.setItem('nostrPrivateKey', nsec);
