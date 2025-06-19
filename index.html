@@ -81,7 +81,7 @@
         
         // 生成新的Nostr密鑰對
         function generateKeys() {
-            const privateKey = nostr.generatePrivateKey();
+            const privateKey = nostr.generateSecretKey();
             privateKeyInput.value = privateKey;
             localStorage.setItem('nostrPrivateKey', privateKey);
             updatePublicKey();
