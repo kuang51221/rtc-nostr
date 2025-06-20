@@ -3,9 +3,9 @@ import {
   getPublicKey,
   finalizeEvent,
   verifyEvent
-} from "https://esm.sh/@nostr/tools@2.15.0/pure";
+} from "https://esm.sh/@nostr/tools@2.15.0/pure?target=es2020";
 
-import { SimplePool } from "https://esm.sh/@nostr/tools@2.15.0/pool";
+import { SimplePool } from "https://esm.sh/@nostr/tools@2.15.0/pool?target=es2020";
 
 let sk, pk;
 const pool = new SimplePool();
