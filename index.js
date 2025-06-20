@@ -1,11 +1,11 @@
-import {
+import * as nostrTools from "https://esm.sh/nostr-tools@2.15.0";
+
+const {
   generateSecretKey,
   getPublicKey,
   finalizeEvent,
-  verifyEvent
-} from "https://jsr.io/@nostr/tools/pure@2.15.0";
-
-import { SimplePool } from "https://jsr.io/@nostr/tools/pool@2.15.0";
+  SimplePool,
+} = nostrTools;
 
 let sk, pk;
 const pool = new SimplePool();
