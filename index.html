@@ -9,7 +9,7 @@
   <script type="module">
     import * as nostrTools from 'https://esm.sh/nostr-tools@2.3.0';
 
-    const sk = nostrTools.generatePrivateKey();
+    const sk = nostrTools.generateSecretKey();
     const pk = nostrTools.getPublicKey(sk);
     console.log('私鑰:', sk);
     console.log('公鑰:', pk);
