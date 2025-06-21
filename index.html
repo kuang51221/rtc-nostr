@@ -1,21 +1,18 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>Nostr Tools 測試</title>
-  <script src="https://unpkg.com/@nostr/tools@2.15.0/dist/nostr.bundle.js"></script>
+  <meta charset="UTF-8">
+  <title>Nostr Tools Test (CDN)</title>
 </head>
 <body>
-  <h2>Nostr Tools v2.15.0 測試頁</h2>
+  <h1>使用 CDN 的 nostr-tools</h1>
+  <script type="module">
+    import * as nostrTools from 'https://esm.sh/nostr-tools@2.3.0';
 
-  <button id="btnGen">🔐 產生金鑰</button>
-  <button id="btnSub">📥 訂閱 Note</button><br><br>
-
-  <textarea id="txt" rows="3" cols="50" placeholder="輸入 note 內容"></textarea><br>
-  <button id="btnPub">📤 發送 Note</button>
-
-  <pre id="log" style="background:#f4f4f4; padding:10px; height:200px; overflow:auto;"></pre>
-
-  <script src="./index.js"></script>
+    const sk = nostrTools.generatePrivateKey();
+    const pk = nostrTools.getPublicKey(sk);
+    console.log('私鑰:', sk);
+    console.log('公鑰:', pk);
+  </script>
 </body>
 </html>
